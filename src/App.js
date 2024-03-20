@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Navbar, Nav, Form } from 'react-bootstrap';
-import { BsSearch, BsHouseDoor, BsGlobeAmericas, BsExclamationTriangle, BsFillExclamationTriangleFill, BsGear, BsGeoAltFill, BsSend } from 'react-icons/bs';
+import { BsSearch, BsHouseDoor, BsGlobeAmericas, BsExclamationTriangle, BsFillExclamationTriangleFill, BsGear, BsGeoAltFill, 
+         BsSend, BsFillPersonFill, BsBellFill, BsFillLockFill, BsHeartFill } from 'react-icons/bs';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import {Icon, divIcon } from 'leaflet'
+import { Icon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "./App.css";
@@ -16,12 +17,21 @@ function ReportButton({ onClick }) {
   );
 }
 
-function SearchContainer() {
+function SearchContainer({ onFavLocationsClick }) {
   return (
     <div className='search-container'>
       <BsSearch className='search-icon'/>
       <input type="text" className='search-input' placeholder="Search..." />
+      <FavoriteLocationsButton onClick={onFavLocationsClick} />
     </div>
+  );
+}
+
+function FavoriteLocationsButton({ onClick }) {
+  return (
+    <a href="#" onClick={onClick}>
+      <BsHeartFill style={{color:'#DF6E6E'}} />
+    </a>
   );
 }
 
@@ -62,32 +72,142 @@ function NavItem({ icon, onClick }) {
   );
 }
 
-function RecentActivityPage({ onClick }) {
+function RecentActivityPage({ onReportButtonClick, }) {
+  const [scene, setScene] = useState('recentActivity'); // State to manage current scene
+  const [selectedReport, setSelectedReport] = useState(null); // State to store the selected report
+
+  // Define an array of placeholder reports
+  const reports = [
+    { 
+      ID: 1, 
+      Description: "Crime",
+      Address: "123 Main St.",
+      Date: "2024-03-20",
+      Time: "10:00 AM",
+      Crime_Type: "Theft",
+      Arrest: "No",
+      Place: "Store",
+      Coordinates: "(40.7128, -74.0060)" 
+    },
+    { 
+      ID: 2, 
+      Description: "Robbery",
+      Address: "456 Elm St.",
+      Date: "2024-03-19",
+      Time: "2:30 PM",
+      Crime_Type: "Fraud",
+      Arrest: "Yes",
+      Place: "Office",
+      Coordinates: "(40.7306, -73.9352)" 
+    },
+    { 
+      ID: 3, 
+      Description: "Harassment",
+      Address: "789 Oak St.",
+      Date: "2024-03-18",
+      Time: "6:45 PM",
+      Crime_Type: "Harassment",
+      Arrest: "No",
+      Place: "Home",
+      Coordinates: "(40.6892, -74.0445)" 
+    }
+  ];
+
+  // Function to handle see details button click
+  function handleSeeDetails(report) {
+    setScene('reportDetails');
+    setSelectedReport(report);
+  }
+
+  // Function to handle back to recent activity click
+  const handleBackToActivityClick = () => {
+    setScene('recentActivity');
+  };
+
   return (
     <>
-      <Title title='RECENT ACTIVITY'/>
-      <div className="scrollable-textbox">
-        <div className="text-content">
-          Put recent activity stuff here.
-        </div>
-      </div>
-      <div className="report-icon-fill">
-        <ReportButton onClick={onClick} />
-      </div>
+      {scene === 'recentActivity' && (
+        <>
+          <Title title='RECENT ACTIVITY'/>
+          <div className="scrollable-textbox">
+            <div className="text-content">
+            <ul className="recent-activity-list">
+              {/* Map over reports array to generate list dynamically */}
+              {reports.map((report) => (
+                <li key={report.ID}>
+                  {report.Description} reported near {report.Address}
+                  <button onClick={() => handleSeeDetails(report)}> &gt;&gt; See Details</button>
+                </li>
+              ))}
+            </ul>
+            </div>
+          </div>
+          <div className="report-icon-fill">
+            <ReportButton onClick={onReportButtonClick} />
+          </div>
+        </>
+      )}
+
+      {scene === 'reportDetails' && (
+        <ReportDetailsPage
+          report={selectedReport} // Pass the selected report to the ReportDetailsPage
+          onBackClick={handleBackToActivityClick} // Pass the handler to navigate back
+        />
+      )}
     </>
   );
+  // return (
+  //   <>
+  //     <Title title='RECENT ACTIVITY'/>
+  //     <div className="scrollable-textbox">
+  //       <div className="text-content">
+  //         Put recent activity stuff here.
+  //       </div>
+  //     </div>
+  //     <div className="report-icon-fill">
+  //       <ReportButton onClick={onClick} />
+  //     </div>
+  //   </>
+  // );
 }
 
-function ReportDetailsPage() {
+function ReportDetailsPage({ report }) {
+  // Destructure the report details
+  const { Description, Address, Date, Time, Crime_Type, Arrest, Place, Coordinates } = report;
+
   return (
     <>
       <Title title='REPORT DETAILS'/>
+      {/* Display the description reported near the address */}
+      <p className="description-address">{Description} reported near {Address}</p>
+
+      <p className="description">Description</p>
+      
       <div className="report-details-container">
+        {/* Display the report details */}
+        <p>Date: {Date}</p>
+        <p>Time: {Time}</p>
+        <p>Crime Type: {Crime_Type}</p>
+        {/* <p>Address: {Address}</p> */}
+        <p>Arrest: {Arrest}</p>
+        <p>Place: {Place}</p>
+        <p>Coordinates: {Coordinates}</p>
         {/* Add your report details UI here */}
       </div>
     </>
   );
 }
+
+// function ReportDetailsPage() {
+//   return (
+//     <>
+//       <Title title='REPORT DETAILS'/>
+//       <div className="report-details-container">
+//         {/* Add your report details UI here */}
+//       </div>
+//     </>
+//   );
+// }
 
 function SendReportPage({ onClick }) {
   const [formData, setFormData] = useState({
@@ -428,13 +548,45 @@ function ThankYouPage({ onClick }) {
   );
 }
 
-function SettingsPage() {
+function SettingsPage({ onFavLocationsClick} ) {
+  const handleFavLocationsButtonClick = () => {
+    onFavLocationsClick();
+  };
+
   return (
     <>
-      <Title title='SETTINGS'/>
-      <div className="settings-container">
-        {/* Add your report details UI here */}
+      <Title title='SETTINGS' style={{ top: '100px' }}/>
+      <div className="settings-container" style={{ width: '80%', marginLeft:'18px' }}>
+        <div className="settings-tab" style={{ top: '150px' }}>
+          <BsFillPersonFill className='settings-icons' style={{ color: '#A0C8BB' }}></BsFillPersonFill>
+          <button className='settings-buttons'>Account Information</button>
+        </div>
+        <div className="settings-tab" style={{ background: '#67B29C', top: '250px' }}>
+          <BsBellFill className='settings-icons' style={{ color: '#ADEAD8' }}></BsBellFill >
+          <button className="settings-buttons" style={{ background: '#67B29C' }}>Notifications</button>
+        </div>
+        <div className="settings-tab" style={{ background: '#7BA154', top: '350px' }}>
+          <BsFillLockFill className='settings-icons' style={{ color: '#C6E8A2' }}></BsFillLockFill>
+          <button className="settings-buttons" style={{ background: '#7BA154' }}>Privacy</button>
+        </div>
+        <div className="settings-tab" style={{ background: '#9BB580', top: '450px' }}>
+          <BsHeartFill className='settings-icons' style={{ color: '#D3EABB' }}></BsHeartFill>
+          <button className="settings-buttons" style={{ background: '#9BB580' }} onClick={handleFavLocationsButtonClick}>Favorite Locations</button>
+        </div>
       </div>
+    </>
+  );
+}
+
+function FavLocationsPage() {
+  return (
+    <>
+      <Title title='FAVORITE LOCATIONS' style={{
+          whiteSpace: 'pre-wrap',
+          position: 'absolute',
+          top:'20%',
+          width: '400px'
+        }}/>
     </>
   );
 }
@@ -470,15 +622,24 @@ function App() {
     setScene('recentActivity');
   };
 
+  const handleFavLocationsClick = () => {
+    setScene('favLocations');
+  };
+
+  const handleSeeDetailsClick = () => {
+    setScene('reportDetails')
+  };
+
   return (
     <div className='phone-screen'>
-      <SearchContainer />
-      {scene === 'recentActivity' && <RecentActivityPage onClick={handleReportButtonClick} />}
-      {scene === 'reportDetails' && <ReportDetailsPage />}
+      {scene !== 'settings' && scene !== 'thankyou' && scene !== 'favLocations' && <SearchContainer onFavLocationsClick={handleFavLocationsClick}/>}
+      {scene === 'recentActivity' && <RecentActivityPage onReportButtonClick={handleReportButtonClick}/>}
+      {scene === 'reportDetails' && <ReportDetailsPage onClick={handleHouseIconClick}/>}
       {scene === 'sendReport' && <SendReportPage onClick={handleSubmitReportClick} />}
       {scene === 'thankyou' && <ThankYouPage onClick={handleBackToActivityClick}/>}
       {scene === 'map' && <MapPage />}
-      {scene === 'settings' && <SettingsPage />}
+      {scene === 'settings' && <SettingsPage onFavLocationsClick={handleFavLocationsClick}/>}
+      {scene === 'favLocations' && <FavLocationsPage onClick={handleFavLocationsClick}/>}
       <NavigationBar onHouseIconClick={handleHouseIconClick} onExclamationIconClick={handleExclamationIconClick}
                      onMapIconClick={handleMapIconClick} onSettingsIconClick={handleSettingsIconClick} />
     </div>

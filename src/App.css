@@ -265,7 +265,7 @@
 }
 
 .send-button:hover {
-  color:#b4983c
+  color:#b4983c;
 }
 
 .send-icon {
@@ -299,4 +299,89 @@
 
 .back-to-activity-button:hover {
   background-color: #8dbb60;
+}
+
+.description-address {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  width: 80%;
+  height: 200px;
+  overflow: auto;
+  font-size: 19px;
+  padding: 10px;
+  line-height: 1;
+  font-style: italic;
+}
+
+.description {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -25%);
+  width: 80%;
+  height: 200px;
+  overflow: auto;
+  font-size: 19px;
+  padding: 10px;
+  line-height: 1;
+  color: #8dbb60;
+  font-weight: bold;
+}
+
+.report-details-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -5%);
+  width: 80%;
+  height: auto;
+  overflow: auto;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  padding: 10px;
+  line-height: 1;
+  background-color: #A1C1B7;
+}
+
+.recent-activity-list button {
+  font-style: italic; /* Italicize the button text */
+  border: none; /* Remove the button border */
+  background: none; /* Remove the button background */
+  color: #3E8670; /* Set the button text color */
+  cursor: pointer; /* Set cursor to pointer on hover */
+  outline: none; /* Remove button outline */
+}
+
+.recent-activity-list button:hover {
+  text-decoration: underline; /* Underline the button text on hover */
+}
+
+.settings-tab {
+  display: flex; 
+  align-items: center;
+  background-color: #3E8670;
+  border: none;
+  border-radius: 20px;
+  color: #000;
+  padding: 10px 30px;
+  height: 80px;
+  width: 80%;
+  cursor: pointer;
+  position: absolute;
+}
+
+.settings-buttons {
+  background-color: #3E8670;
+  font-size: 18px;
+  border: none;
+  padding: 15px 0; 
+  text-align: left; 
+}
+
+.settings-icons {
+  font-size: 50px;
+  color: #000;
+  margin-right: 5px;
 }
