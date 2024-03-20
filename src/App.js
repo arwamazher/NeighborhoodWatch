@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Navbar, Nav, Form } from 'react-bootstrap';
 import { BsSearch, BsHouseDoor, BsGlobeAmericas, BsExclamationTriangle, BsFillExclamationTriangleFill, BsGear, BsGeoAltFill, BsSend } from 'react-icons/bs';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import {Icon, divIcon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "./App.css";
@@ -24,12 +25,12 @@ function SearchContainer() {
   );
 }
 
-function Title({ title }) {
+function Title({ title, style }) {
   return (
     <Container fluid>
       <Row>
         <Col xs={8} className='text-center'>
-          <h1 className='title'>{title}</h1>
+          <h1 className='title' style={style}>{title}</h1>
         </Col>
       </Row>
     </Container>
@@ -107,15 +108,43 @@ function SendReportPage({ onClick }) {
       hours = String(Number(hours) + 1).padStart(2, '0');
       minutes = '00';
     }
-    return '${hours}:${minutes}';
+    return `${hours}:${minutes}`;
   }
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    if (name === 'locationType' && value === 'current') {
+      // If the user selects "Current", retrieve the current location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            // Update the formData with the current latitude and longitude
+            setFormData({
+              ...formData,
+              [name]: value,
+              latitude,
+              longitude
+            });
+          },
+          (error) => {
+            console.error('Error getting current location:', error);
+          }
+        );
+      } else {
+        console.error('Geolocation is not supported by this browser.');
+      }
+    } else {
+      // For other inputs, update the formData as usual
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
+  };  
+
+  const handleSubmit = () => {
+    onClick(); // Trigger the onClick function passed from the parent component
   };
 
   return (
@@ -129,6 +158,13 @@ function SendReportPage({ onClick }) {
             <DetailsSection formData={formData} onInputChange={handleInputChange} />
             <TimeSection formData={formData} onInputChange={handleInputChange} />
           </div>
+          <div 
+            className="send-button" 
+            onClick={handleSubmit} // Call handleSubmit function when the button is clicked
+          >
+            <span className="send-text">SEND</span>
+            <BsSend className="send-icon" />
+          </div>
         </Form>
       </div>
     </>
@@ -139,78 +175,111 @@ function LocationSection({ formData, onInputChange }) {
   return (
     <Form.Group controlId="locationType">
       <Form.Label className="form-label-custom">Location</Form.Label>
-      <Form.Check className="form-check-custom"
-        type="radio"
-        id="currentLocation"
-        label="Current"
-        name="locationType"
-        value="current"
-        checked={formData.locationType === 'current'}
-        onChange={onInputChange}
-      />
-      <Form.Check className="form-check-custom"
-        type="radio"
-        id="otherLocation"
-        label="Other:"
-        name="locationType"
-        value="other"
-        checked={formData.locationType === 'other'}
-        onChange={onInputChange}
-      />
-      {formData.locationType === 'other' && (
-        <Form.Control className="form-check-custom"
-          type="text"
-          placeholder="Enter location"
-          name="location"
-          value={formData.location}
-          onChange={onInputChange}
-        />
-      )}
+      <div className="location-options">
+        <div className="location-option">
+          <Form.Check
+            className="form-check-custom"
+            type="radio"
+            id="currentLocation"
+            label="Current"
+            name="locationType"
+            value="current"
+            checked={formData.locationType === 'current'}
+            onChange={onInputChange}
+          />
+        </div>
+        <div className="location-option">
+          <Form.Check
+            className="form-check-custom"
+            type="radio"
+            id="otherLocation"
+            label="Other:"
+            name="locationType"
+            value="other"
+            checked={formData.locationType === 'other'}
+            onChange={onInputChange}
+          />
+          {formData.locationType === 'other' && (
+            <Form.Control
+              className="form-check-custom other-input"
+              // style={{ display: formData.locationType === 'other' ? 'block' : 'none' }}
+              style={{ visibility: formData.locationType === 'other' ? 'visible' : 'hidden' }}
+              type="text"
+              placeholder="Enter location"
+              name="location"
+              value={formData.location}
+              onChange={onInputChange}
+            />
+          )}
+        </div>
+      </div>
+      {/* Uncomment the following code to display the coordinates so you know they're working */}
+      {/* {formData.latitude && formData.longitude && (
+        <div>
+          Latitude: {formData.latitude}, Longitude: {formData.longitude}
+        </div>
+      )} */}
     </Form.Group>
   );
 }
 
 function ReportCategorySection({ formData, onInputChange }) {
   return (
-    <Form.Group controlId="reportCategory">
-      <Form.Label className="form-label-custom">Report Category</Form.Label>
-      <Form.Check className="form-check-custom"
-        type="radio"
-        id="crimeCategory"
-        label="Crime"
-        name="reportCategory"
-        value="crime"
-        checked={formData.reportCategory === 'crime'}
-        onChange={onInputChange}
-      />
-      <Form.Check className="form-check-custom"
-        type="radio"
-        id="hazardCategory"
-        label="Hazard"
-        name="reportCategory"
-        value="hazard"
-        checked={formData.reportCategory === 'hazard'}
-        onChange={onInputChange}
-      />
-      <Form.Check className="form-check-custom"
-        type="radio"
-        id="otherCategory"
-        label="Other:"
-        name="reportCategory"
-        value="other"
-        checked={formData.reportCategory === 'other'}
-        onChange={onInputChange}
-      />
-      {formData.reportCategory === 'other' && (
-        <Form.Control className="form-check-custom"
-          type="text"
-          placeholder="Enter category"
-          name="category"
-          value={formData.category}
-          onChange={onInputChange}
-        />
-      )}
-    </Form.Group>
+    <div className="report-category-container">
+      <Form.Group controlId="reportCategory">
+        <Form.Label className="form-label-custom">Report Category</Form.Label>
+        <div className="report-category-options">
+          <div className="report-category-option">
+            <Form.Check
+              className="form-check-custom"
+              type="radio"
+              id="crimeCategory"
+              label="Crime"
+              name="reportCategory"
+              value="crime"
+              checked={formData.reportCategory === 'crime'}
+              onChange={onInputChange}
+            />
+          </div>
+          <div className="report-category-option">
+            <Form.Check
+              className="form-check-custom"
+              type="radio"
+              id="otherCategory"
+              label="Other:"
+              name="reportCategory"
+              value="other"
+              checked={formData.reportCategory === 'other'}
+              onChange={onInputChange}
+            />
+            {formData.reportCategory === 'other' && (
+              <Form.Control
+                className="form-check-custom other-input"
+                // style={{ display: formData.reportCategory === 'other' ? 'block' : 'none' }}
+                style={{ visibility: formData.reportCategory === 'other' ? 'visible' : 'hidden' }}
+                type="text"
+                placeholder="Enter category"
+                name="category"
+                value={formData.category}
+                onChange={onInputChange}
+              />
+            )}
+          </div>
+        </div>
+        <div className="report-category-option">
+          <Form.Check
+            className="form-check-custom"
+            type="radio"
+            id="hazardCategory"
+            label="Hazard"
+            name="reportCategory"
+            value="hazard"
+            checked={formData.reportCategory === 'hazard'}
+            onChange={onInputChange}
+          />
+        </div>
+      </Form.Group>
+    </div>
   );
 }
 
@@ -222,6 +291,7 @@ function DetailsSection({ formData, onInputChange }) {
         as="textarea"
         rows={3}
         name="details"
+        placeholder="Enter details"
         value={formData.details}
         onChange={onInputChange}
       />
@@ -272,39 +342,32 @@ function TimeSection({ formData, onInputChange }) {
       </div>
     </Form.Group>
   );
-  // return (
-  //   <Form.Group controlId="time" className='details-time-spacing'>
-  //     <Form.Label className="form-label-custom">Time</Form.Label>
-  //     <div className="time-dropdowns">
-  //       <Form.Control
-  //         className="form-check-custom time-dropdown"
-  //         as="select"
-  //         name="time"
-  //         value={formData.time}
-  //         onChange={onInputChange}
-  //       >
-  //         {hoursOptions.map((option, index) => (
-  //           <option key={index}>{option}</option>
-  //         ))}
-  //       </Form.Control>
-  //     </div>
-  //     <div className="time-dropdowns">
-  //       <Form.Control
-  //         className="form-check-custom time-dropdown-ampm"
-  //         as="select"
-  //         name="ampm"
-  //         value={formData.ampm}
-  //         onChange={onInputChange}
-  //       >
-  //         <option>AM</option>
-  //         <option>PM</option>
-  //       </Form.Control>
-  //     </div>
-  //   </Form.Group>
-  // );
 }
 
 function MapPage() {
+  const [currentLocation, setCurrentLocation] = useState(null);
+
+  const currLocIcon = new Icon ({
+    iconUrl: require('./icons8-location-50.png'), 
+    iconSize: [50, 50]
+  })
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setCurrentLocation([latitude, longitude]);
+        },
+        (error) => {
+          console.error('Error getting current location:', error);
+        }
+      );
+    } else {
+      console.error('Geolocation is not supported by this browser.');
+    }
+  }, []);
+
   return (
     <>
       <div className="map-legend">
@@ -322,6 +385,12 @@ function MapPage() {
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        {/* Marker for Current Location */}
+        {currentLocation && (
+          <Marker position={currentLocation} icon={currLocIcon}>
+            <Popup>Your Current Location</Popup>
+          </Marker>
+        )}
       </MapContainer>
       <div className="swipe-to-scroll">
         Swipe to scroll
@@ -331,10 +400,30 @@ function MapPage() {
 }
 
 function ThankYouPage({ onClick }) {
+  const handleBackToActivityClick = () => {
+    onClick(); // Navigate back to the Recent Activity page
+  };
+
   return (
     <>
-      <h1>Thank You Page</h1>
-      {/* Add your thank you message or UI here */}
+      <Title 
+        title='THANK YOU FOR SENDING YOUR REPORT'
+        style={{
+          whiteSpace: 'pre-wrap',
+          position: 'absolute',
+          top: '40%',
+          margin: 'auto',
+          width: '400px'
+        }}
+      />
+      <div style={{ textAlign: 'center', marginTop: '20px' }}>
+        <button 
+          className="back-to-activity-button" 
+          onClick={handleBackToActivityClick}
+        >
+          BACK TO ACTIVITY
+        </button>
+      </div>
     </>
   );
 }
