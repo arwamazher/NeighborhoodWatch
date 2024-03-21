@@ -74,49 +74,49 @@ function NavItem({ icon, onClick }) {
 }
 
 function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick }) {
-  const [scene, setScene] = useState('recentActivity'); // State to manage current scene
-  const [selectedReport, setSelectedReport] = useState(null); // State to store the selected report
-  // const {handleSeeDetails, handleReportButtonClick} = onClick;
+  const [scene, setScene] = useState('recentActivity'); // Manage current scene
+  const [selectedReport, setSelectedReport] = useState(null); // Store the selected report
 
   // Function to handle see details button click
   return (
     <>
-  <Title title='RECENT ACTIVITY'/>
-  <div className="scrollable-textbox">
-    <div className="text-content">
-      <ul className="recent-activity-list">
-        {/* Map over reports array to generate list dynamically */}
-        {reports.map((report) => (
-          <li key={report.case_}>
-            {report.Category} reported near {report.block}
-            <button onClick={() => onSeeDetails(report)}> &gt;&gt; See Details</button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  </div>
-  <div className="report-icon-fill">
-    <ReportButton onClick={onReportButtonClick} />
-  </div>
-</>
+      <Title title='RECENT ACTIVITY'/>
+      <div className="scrollable-textbox">
+        <div className="text-content">
+          <ul className="recent-activity-list">
+            {/* Map over reports array to generate list dynamically */}
+            {reports.map((report) => (
+              <li key={report.case_}>
+                {report.Category} reported near {report.block}
+                <button onClick={() => onSeeDetails(report)}> &gt;&gt; See Details</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      {/* Shortcut on recentActivityPage to fill out a report*/}
+      <div className="report-icon-fill">
+        <ReportButton onClick={onReportButtonClick} />
+      </div>
+    </>
   );
 }
 
 function ReportDetailsPage({report}) {
-  const [scene, setScene] = useState('reportDetails'); // State to manage current scene
+  // const [scene, setScene] = useState('reportDetails'); // Manage current scene
 
   return (
     <>
       <Title title='REPORT DETAILS'/>
       {/* Display the description reported near the address */}
-      <p className="description-address">{report._primary_decsription} reported near {report.block}</p>
+      <p className="description-address">{report.Category} reported near {report.block}</p>
 
       <p className="description">Description</p>
       
       <div className="report-details-container">
         {/* Display the report details */}
-        <p>Date: {report.date_of_occurrence}</p>
-        <p>Type: {report._primary_decsription + ', ' + report._secondary_description}</p>
+        <p>Date: {report.date}, {report.time}</p>
+        <p>Type: {report.details}</p>
         <p>Arrest: {report.arrest}</p>
         <p>Place: {report._location_description}</p>
         <p>Coordinates: {report.latitude + ', ' + report.longitude}</p>
@@ -126,14 +126,6 @@ function ReportDetailsPage({report}) {
 }
 
 function SendReportPage({ onClick }) {
-  const [formData, setFormData] = useState({
-    locationType: 'current',
-    reportCategory: 'crime',
-    details: '',
-    time: getCurrentTime(),
-    ampm: 'AM'
-  });
-
   function getCurrentTime() {
     const currentDate = new Date();
     let hours = currentDate.getHours().toString().padStart(2, '0');
@@ -147,10 +139,20 @@ function SendReportPage({ onClick }) {
     return `${hours}:${minutes}`;
   }
 
+  {/* Set default values for formData */}
+  const [formData, setFormData] = useState({
+    locationType: '',
+    reportCategory: '',
+    details: '',
+    time: getCurrentTime(),
+    ampm: ''
+  });
+
+  {/* Update form according to user input */}
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     if (name === 'locationType' && value === 'current') {
-      // If the user selects "Current", retrieve the current location
+      // If the user selects "Current", get the current location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -206,7 +208,7 @@ function SendReportPage({ onClick }) {
     </>
   );
 }
-
+// Location section on SendReportPage
 function LocationSection({ formData, onInputChange }) {
   return (
     <Form.Group controlId="locationType">
@@ -238,7 +240,6 @@ function LocationSection({ formData, onInputChange }) {
           {formData.locationType === 'other' && (
             <Form.Control
               className="form-check-custom other-input"
-              // style={{ display: formData.locationType === 'other' ? 'block' : 'none' }}
               style={{ visibility: formData.locationType === 'other' ? 'visible' : 'hidden' }}
               type="text"
               placeholder="Enter location"
@@ -259,6 +260,7 @@ function LocationSection({ formData, onInputChange }) {
   );
 }
 
+// Report category section on SendReportPage
 function ReportCategorySection({ formData, onInputChange }) {
   return (
     <div className="report-category-container">
@@ -319,6 +321,7 @@ function ReportCategorySection({ formData, onInputChange }) {
   );
 }
 
+// Details section on SendReportPage
 function DetailsSection({ formData, onInputChange }) {
   return (
     <Form.Group controlId="details">
@@ -335,6 +338,7 @@ function DetailsSection({ formData, onInputChange }) {
   );
 }
 
+// Time section on SendReportPage
 function TimeSection({ formData, onInputChange }) {
   const hoursOptions = [];
   const minutesOptions = ["00", "30"];
@@ -383,16 +387,17 @@ function TimeSection({ formData, onInputChange }) {
 function MapPage({ reports }) {
   const [currentLocation, setCurrentLocation] = useState([0, 0]);
 
+  // Create icons for currentLocation and reports
   const currLocIcon = new Icon({
     iconUrl: require('./icons8-location-50.png'),
     iconSize: [40, 40]
   });
-
   const reportIcon = new Icon({
     iconUrl: require('./icons8-warning-30.png'),
     iconSize: [30, 30]
   });
 
+  // Get current location
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -438,33 +443,16 @@ function MapPage({ reports }) {
           // Parse coordinates from string "(latitude, longitude)"
           // const coordinates = report.location.replace(/[()]/g, '').split(',').map(coord => parseFloat(coord.trim()));
           return (
-            
             <Marker key={report.case_} position={[report.latitude, report.longitude]} icon={reportIcon}>
               <Popup>
                 <div>
-                  <h3>{report._primary_decsription}</h3>
+                  <h3>{report.details}</h3>
                   <p>{report._location_description}</p>
-                  {/* Add more details as needed */}
                 </div>
               </Popup>
             </Marker>
           );
         })}
-        {/* {reports.map((report) => {
-          // Parse coordinates from string "(latitude, longitude)"
-          const coordinates = report.Coordinates.replace(/[()]/g, '').split(',').map(coord => parseFloat(coord.trim()));
-          return (
-            <Marker key={report.ID} position={coordinates} icon={reportIcon}>
-              <Popup>
-                <div>
-                  <h3>{report.Description}</h3>
-                  <p>{report.Address}</p>
-                  {/* Add more details as needed
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })} */}
       </MapContainer>
       <div className="swipe-to-scroll">
         Swipe to scroll
@@ -546,23 +534,25 @@ function FavLocationsPage() {
 }
 
 function App() {
-  const [scene, setScene] = useState('recentActivity');
-  const [selectedReport, setSelectedReport] = useState(null);
-  const [reports, setReports] = useState([]);
+  const [scene, setScene] = useState('recentActivity'); // Manage scenes
+  const [selectedReport, setSelectedReport] = useState(null); // Manage reports for SeeDetails
+  const [reports, setReports] = useState([]); // Manage all reports
 
+  // Fetch data from imported JSON data
   useEffect(() => {
+    // Define function to fetchData
     const fetchData = () => {
       try {
-        // Instead of fetching data from an API, use the imported JSON data directly
         setReports(chicago_crime_data);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
-  
+    // Call function
     fetchData();
   }, []);
 
+  // Define function handlers
   const handleReportButtonClick = () => {
     setScene('sendReport');
   };
@@ -602,7 +592,7 @@ function App() {
     setSelectedReport(report);
   }
 
-  return (
+  return ( /* Return based off scene selected */
     <div className='phone-screen'>
       {scene !== 'settings' && scene !== 'thankyou' && scene !== 'favLocations' && <SearchContainer onFavLocationsClick={handleFavLocationsClick}/>}
       {scene === 'recentActivity' && (<RecentActivityPage reports={reports} onSeeDetails={handleSeeDetails} onReportButtonClick={handleReportButtonClick} />)}
