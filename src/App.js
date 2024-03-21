@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
 import 'bootstrap/dist/css/bootstrap.min.css';
+import chicago_crime_data from './chicago_crime_data.json';
 import "./App.css";
 
 function ReportButton({ onClick }) {
@@ -21,7 +22,7 @@ function SearchContainer({ onFavLocationsClick }) {
   return (
     <div className='search-container'>
       <BsSearch className='search-icon'/>
-      <input type="text" className='search-input' placeholder="Search..." />
+      <input type="text" className='search-input' placeholder="Search (e.g. 123 S Sesame St)" />
       <FavoriteLocationsButton onClick={onFavLocationsClick} />
     </div>
   );
@@ -72,142 +73,57 @@ function NavItem({ icon, onClick }) {
   );
 }
 
-function RecentActivityPage({ onReportButtonClick, }) {
+function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick }) {
   const [scene, setScene] = useState('recentActivity'); // State to manage current scene
   const [selectedReport, setSelectedReport] = useState(null); // State to store the selected report
-
-  // Define an array of placeholder reports
-  const reports = [
-    { 
-      ID: 1, 
-      Description: "Crime",
-      Address: "123 Main St.",
-      Date: "2024-03-20",
-      Time: "10:00 AM",
-      Crime_Type: "Theft",
-      Arrest: "No",
-      Place: "Store",
-      Coordinates: "(40.7128, -74.0060)" 
-    },
-    { 
-      ID: 2, 
-      Description: "Robbery",
-      Address: "456 Elm St.",
-      Date: "2024-03-19",
-      Time: "2:30 PM",
-      Crime_Type: "Fraud",
-      Arrest: "Yes",
-      Place: "Office",
-      Coordinates: "(40.7306, -73.9352)" 
-    },
-    { 
-      ID: 3, 
-      Description: "Harassment",
-      Address: "789 Oak St.",
-      Date: "2024-03-18",
-      Time: "6:45 PM",
-      Crime_Type: "Harassment",
-      Arrest: "No",
-      Place: "Home",
-      Coordinates: "(40.6892, -74.0445)" 
-    }
-  ];
+  // const {handleSeeDetails, handleReportButtonClick} = onClick;
 
   // Function to handle see details button click
-  function handleSeeDetails(report) {
-    setScene('reportDetails');
-    setSelectedReport(report);
-  }
-
-  // Function to handle back to recent activity click
-  const handleBackToActivityClick = () => {
-    setScene('recentActivity');
-  };
-
   return (
     <>
-      {scene === 'recentActivity' && (
-        <>
-          <Title title='RECENT ACTIVITY'/>
-          <div className="scrollable-textbox">
-            <div className="text-content">
-            <ul className="recent-activity-list">
-              {/* Map over reports array to generate list dynamically */}
-              {reports.map((report) => (
-                <li key={report.ID}>
-                  {report.Description} reported near {report.Address}
-                  <button onClick={() => handleSeeDetails(report)}> &gt;&gt; See Details</button>
-                </li>
-              ))}
-            </ul>
-            </div>
-          </div>
-          <div className="report-icon-fill">
-            <ReportButton onClick={onReportButtonClick} />
-          </div>
-        </>
-      )}
-
-      {scene === 'reportDetails' && (
-        <ReportDetailsPage
-          report={selectedReport} // Pass the selected report to the ReportDetailsPage
-          onBackClick={handleBackToActivityClick} // Pass the handler to navigate back
-        />
-      )}
-    </>
+  <Title title='RECENT ACTIVITY'/>
+  <div className="scrollable-textbox">
+    <div className="text-content">
+      <ul className="recent-activity-list">
+        {/* Map over reports array to generate list dynamically */}
+        {reports.map((report) => (
+          <li key={report.case_}>
+            {report.Category} reported near {report.block}
+            <button onClick={() => onSeeDetails(report)}> &gt;&gt; See Details</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+  <div className="report-icon-fill">
+    <ReportButton onClick={onReportButtonClick} />
+  </div>
+</>
   );
-  // return (
-  //   <>
-  //     <Title title='RECENT ACTIVITY'/>
-  //     <div className="scrollable-textbox">
-  //       <div className="text-content">
-  //         Put recent activity stuff here.
-  //       </div>
-  //     </div>
-  //     <div className="report-icon-fill">
-  //       <ReportButton onClick={onClick} />
-  //     </div>
-  //   </>
-  // );
 }
 
-function ReportDetailsPage({ report }) {
-  // Destructure the report details
-  const { Description, Address, Date, Time, Crime_Type, Arrest, Place, Coordinates } = report;
+function ReportDetailsPage({report}) {
+  const [scene, setScene] = useState('reportDetails'); // State to manage current scene
 
   return (
     <>
       <Title title='REPORT DETAILS'/>
       {/* Display the description reported near the address */}
-      <p className="description-address">{Description} reported near {Address}</p>
+      <p className="description-address">{report._primary_decsription} reported near {report.block}</p>
 
       <p className="description">Description</p>
       
       <div className="report-details-container">
         {/* Display the report details */}
-        <p>Date: {Date}</p>
-        <p>Time: {Time}</p>
-        <p>Crime Type: {Crime_Type}</p>
-        {/* <p>Address: {Address}</p> */}
-        <p>Arrest: {Arrest}</p>
-        <p>Place: {Place}</p>
-        <p>Coordinates: {Coordinates}</p>
-        {/* Add your report details UI here */}
+        <p>Date: {report.date_of_occurrence}</p>
+        <p>Type: {report._primary_decsription + ', ' + report._secondary_description}</p>
+        <p>Arrest: {report.arrest}</p>
+        <p>Place: {report._location_description}</p>
+        <p>Coordinates: {report.latitude + ', ' + report.longitude}</p>
       </div>
-    </>
+      </>
   );
 }
-
-// function ReportDetailsPage() {
-//   return (
-//     <>
-//       <Title title='REPORT DETAILS'/>
-//       <div className="report-details-container">
-//         {/* Add your report details UI here */}
-//       </div>
-//     </>
-//   );
-// }
 
 function SendReportPage({ onClick }) {
   const [formData, setFormData] = useState({
@@ -464,13 +380,18 @@ function TimeSection({ formData, onInputChange }) {
   );
 }
 
-function MapPage() {
-  const [currentLocation, setCurrentLocation] = useState(null);
+function MapPage({ reports }) {
+  const [currentLocation, setCurrentLocation] = useState([0, 0]);
 
-  const currLocIcon = new Icon ({
-    iconUrl: require('./icons8-location-50.png'), 
-    iconSize: [50, 50]
-  })
+  const currLocIcon = new Icon({
+    iconUrl: require('./icons8-location-50.png'),
+    iconSize: [40, 40]
+  });
+
+  const reportIcon = new Icon({
+    iconUrl: require('./icons8-warning-30.png'),
+    iconSize: [30, 30]
+  });
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -511,6 +432,39 @@ function MapPage() {
             <Popup>Your Current Location</Popup>
           </Marker>
         )}
+
+        {/* Markers for Reports */}
+        {reports.map((report) => {
+          // Parse coordinates from string "(latitude, longitude)"
+          // const coordinates = report.location.replace(/[()]/g, '').split(',').map(coord => parseFloat(coord.trim()));
+          return (
+            
+            <Marker key={report.case_} position={[report.latitude, report.longitude]} icon={reportIcon}>
+              <Popup>
+                <div>
+                  <h3>{report._primary_decsription}</h3>
+                  <p>{report._location_description}</p>
+                  {/* Add more details as needed */}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+        {/* {reports.map((report) => {
+          // Parse coordinates from string "(latitude, longitude)"
+          const coordinates = report.Coordinates.replace(/[()]/g, '').split(',').map(coord => parseFloat(coord.trim()));
+          return (
+            <Marker key={report.ID} position={coordinates} icon={reportIcon}>
+              <Popup>
+                <div>
+                  <h3>{report.Description}</h3>
+                  <p>{report.Address}</p>
+                  {/* Add more details as needed
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })} */}
       </MapContainer>
       <div className="swipe-to-scroll">
         Swipe to scroll
@@ -593,6 +547,21 @@ function FavLocationsPage() {
 
 function App() {
   const [scene, setScene] = useState('recentActivity');
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [reports, setReports] = useState([]);
+
+  useEffect(() => {
+    const fetchData = () => {
+      try {
+        // Instead of fetching data from an API, use the imported JSON data directly
+        setReports(chicago_crime_data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+  
+    fetchData();
+  }, []);
 
   const handleReportButtonClick = () => {
     setScene('sendReport');
@@ -626,18 +595,21 @@ function App() {
     setScene('favLocations');
   };
 
-  const handleSeeDetailsClick = () => {
-    setScene('reportDetails')
-  };
+  function handleSeeDetails(report) {
+    // Set the scene to 'reportDetails' to render the report details page
+    setScene('reportDetails');
+    // Set the selected report
+    setSelectedReport(report);
+  }
 
   return (
     <div className='phone-screen'>
       {scene !== 'settings' && scene !== 'thankyou' && scene !== 'favLocations' && <SearchContainer onFavLocationsClick={handleFavLocationsClick}/>}
-      {scene === 'recentActivity' && <RecentActivityPage onReportButtonClick={handleReportButtonClick}/>}
-      {scene === 'reportDetails' && <ReportDetailsPage onClick={handleHouseIconClick}/>}
+      {scene === 'recentActivity' && (<RecentActivityPage reports={reports} onSeeDetails={handleSeeDetails} onReportButtonClick={handleReportButtonClick} />)}
+      {scene === 'reportDetails' && <ReportDetailsPage report={selectedReport} />}
       {scene === 'sendReport' && <SendReportPage onClick={handleSubmitReportClick} />}
       {scene === 'thankyou' && <ThankYouPage onClick={handleBackToActivityClick}/>}
-      {scene === 'map' && <MapPage />}
+      {scene === 'map' && <MapPage reports = {reports}/>}
       {scene === 'settings' && <SettingsPage onFavLocationsClick={handleFavLocationsClick}/>}
       {scene === 'favLocations' && <FavLocationsPage onClick={handleFavLocationsClick}/>}
       <NavigationBar onHouseIconClick={handleHouseIconClick} onExclamationIconClick={handleExclamationIconClick}

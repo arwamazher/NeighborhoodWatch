@@ -24,9 +24,9 @@
 .search-container {
   position: absolute;
   top: 50px;
-  left: 130px;
+  left: 50%;
   transform: translateX(-50%);
-  width: 50%;
+  width: 80%;
   height: 7%;
   background-color: #A9C58D;
   border-radius: 20px 20px 20px 20px;
