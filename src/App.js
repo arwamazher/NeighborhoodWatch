@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Navbar, Nav, Form } from 'react-bootstrap';
 import { BsSearch, BsHouseDoor, BsGlobeAmericas, BsExclamationTriangle, BsFillExclamationTriangleFill, BsGear, BsGeoAltFill, 
-         BsSend, BsFillPersonFill, BsBellFill, BsFillLockFill, BsHeartFill } from 'react-icons/bs';
+         BsSend, BsFillPersonFill, BsBellFill, BsFillLockFill, BsHeartFill, BsHandThumbsUp, BsFillHandThumbsUpFill } from 'react-icons/bs';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Icon } from 'leaflet'
 import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
@@ -18,11 +18,20 @@ function ReportButton({ onClick }) {
   );
 }
 
-function SearchContainer({ onFavLocationsClick }) {
+function SearchContainer({ onFavLocationsClick, searchQuery, setSearchQuery }) {
+  const handleSearchInputChange = (event) => {
+    setSearchQuery(event.target.value); // Update the search query state
+  };
   return (
     <div className='search-container'>
       <BsSearch className='search-icon'/>
-      <input type="text" className='search-input' placeholder="Search (e.g. 123 S Sesame St)" />
+      <input 
+        type="text" 
+        className='search-input' 
+        placeholder="Search (e.g. 123 S Sesame St)" 
+        value={searchQuery} // Bind the input value to the search query state
+        onChange={handleSearchInputChange}
+      />
       <FavoriteLocationsButton onClick={onFavLocationsClick} />
     </div>
   );
@@ -73,9 +82,18 @@ function NavItem({ icon, onClick }) {
   );
 }
 
-function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick }) {
+function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick, favLocations }) {
   const [scene, setScene] = useState('recentActivity'); // Manage current scene
   const [selectedReport, setSelectedReport] = useState(null); // Store the selected report
+  const [thumbsUpFilled, setThumbsUpFilled] = useState({}); // State to track filled status of thumbs-up buttons
+
+  // Function to handle thumbs-up button click
+  const handleThumbsUpClick = (index) => {
+    setThumbsUpFilled((prevState) => ({
+      ...prevState,
+      [index]: !prevState[index], // Toggle the filled status for the clicked thumbs-up button
+    }));
+  }
 
   // Function to handle see details button click
   return (
@@ -85,10 +103,23 @@ function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick }) {
         <div className="text-content">
           <ul className="recent-activity-list">
             {/* Map over reports array to generate list dynamically */}
-            {reports.map((report) => (
+            {reports.map((report, index) => (
               <li key={report.case_}>
-                {report.Category} reported near {report.block}
-                <button onClick={() => onSeeDetails(report)}> &gt;&gt; See Details</button>
+                {favLocations.includes(report.block) ? (
+                  <>
+                    <span className='report-category-activity-list'>{report.Category}</span> reported near {report.block} <BsHeartFill style={{color:'#DF6E6E'}} />
+                    <button onClick={() => onSeeDetails(report)}> &gt;&gt; See Details</button>
+                  </>
+                ) : (
+                  <>
+                    <span className='report-category-activity-list'>{report.Category}</span> reported near {report.block}
+                    <button onClick={() => onSeeDetails(report)}> &gt;&gt; See Details</button>
+                  </>
+                )} 
+                {/* Thumbs-up button */}
+                <button onClick={() => handleThumbsUpClick(index)} className="thumbs-up-button">
+                  {thumbsUpFilled[index] ? <BsFillHandThumbsUpFill className='thumbs-up' /> : <BsHandThumbsUp className='thumbs-up' style={{ color: '#69A031' }}/>}
+                </button>
               </li>
             ))}
           </ul>
@@ -103,13 +134,11 @@ function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick }) {
 }
 
 function ReportDetailsPage({report}) {
-  // const [scene, setScene] = useState('reportDetails'); // Manage current scene
-
   return (
     <>
       <Title title='REPORT DETAILS'/>
       {/* Display the description reported near the address */}
-      <p className="description-address">{report.Category} reported near {report.block}</p>
+      <p className="description-address"><span className='description-category'>{report.Category}</span> reported near {report.block}</p>
 
       <p className="description">Description</p>
       
@@ -520,7 +549,25 @@ function SettingsPage({ onFavLocationsClick} ) {
   );
 }
 
-function FavLocationsPage() {
+function FavLocationsPage({ favLocations, onAddLocation }) {
+  const [streetAddress, setStreetAddress] = useState('');
+
+  const [newLocation, setNewLocation] = useState('');
+
+  const handleChange = (event) => {
+    setNewLocation(event.target.value);
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    if (newLocation.trim() !== '') {
+      // Call the onAddLocation function passed from the parent component
+      onAddLocation(newLocation.trim());
+      // Clear the input field after adding the location
+      setNewLocation('');
+    }
+  };
+
   return (
     <>
       <Title title='FAVORITE LOCATIONS' style={{
@@ -529,6 +576,25 @@ function FavLocationsPage() {
           top:'20%',
           width: '400px'
         }}/>
+      <div>
+        <ul className='list-of-favs'>
+          {favLocations.map((location, index) => (
+            <li key={index}>{location}</li>
+          ))}
+        </ul>
+        <form onSubmit={handleSubmit}>
+          <label className="fav-locations-search">
+            <span className='description-category'>Add New Location:</span>
+            <input
+              type="text"
+              value={newLocation}
+              onChange={handleChange}
+              placeholder="Enter new location"
+            />
+          </label>
+          <button type="submit" className='fav-submit'>Add</button>
+        </form>
+      </div>
     </>
   );
 }
@@ -537,6 +603,8 @@ function App() {
   const [scene, setScene] = useState('recentActivity'); // Manage scenes
   const [selectedReport, setSelectedReport] = useState(null); // Manage reports for SeeDetails
   const [reports, setReports] = useState([]); // Manage all reports
+  const [favLocations, setFavLocations] = useState([]); // Manage favorited locations
+  const [searchQuery, setSearchQuery] = useState(''); // Manage search query
 
   // Fetch data from imported JSON data
   useEffect(() => {
@@ -585,6 +653,10 @@ function App() {
     setScene('favLocations');
   };
 
+  const handleAddLocation = (newLocation) => {
+    setFavLocations([...favLocations, newLocation]);
+  };
+
   function handleSeeDetails(report) {
     // Set the scene to 'reportDetails' to render the report details page
     setScene('reportDetails');
@@ -592,18 +664,45 @@ function App() {
     setSelectedReport(report);
   }
 
+  // Filter reports based on search query
+  const filteredReports = reports.filter((report) =>
+    report.block.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return ( /* Return based off scene selected */
     <div className='phone-screen'>
-      {scene !== 'settings' && scene !== 'thankyou' && scene !== 'favLocations' && <SearchContainer onFavLocationsClick={handleFavLocationsClick}/>}
-      {scene === 'recentActivity' && (<RecentActivityPage reports={reports} onSeeDetails={handleSeeDetails} onReportButtonClick={handleReportButtonClick} />)}
+      {scene !== 'settings' && scene !== 'thankyou' && scene !== 'favLocations' && 
+        <SearchContainer 
+            onFavLocationsClick={handleFavLocationsClick}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+        />
+      }
+      {scene === 'recentActivity' && 
+        (<RecentActivityPage 
+            reports={filteredReports} 
+            onSeeDetails={handleSeeDetails} 
+            onReportButtonClick={handleReportButtonClick} 
+            favLocations={favLocations}
+        />)
+      }
       {scene === 'reportDetails' && <ReportDetailsPage report={selectedReport} />}
       {scene === 'sendReport' && <SendReportPage onClick={handleSubmitReportClick} />}
       {scene === 'thankyou' && <ThankYouPage onClick={handleBackToActivityClick}/>}
       {scene === 'map' && <MapPage reports = {reports}/>}
       {scene === 'settings' && <SettingsPage onFavLocationsClick={handleFavLocationsClick}/>}
-      {scene === 'favLocations' && <FavLocationsPage onClick={handleFavLocationsClick}/>}
-      <NavigationBar onHouseIconClick={handleHouseIconClick} onExclamationIconClick={handleExclamationIconClick}
-                     onMapIconClick={handleMapIconClick} onSettingsIconClick={handleSettingsIconClick} />
+      {scene === 'favLocations' && 
+        <FavLocationsPage 
+            favLocations={favLocations} 
+            onAddLocation={handleAddLocation} 
+        />
+      }
+      <NavigationBar 
+        onHouseIconClick={handleHouseIconClick} 
+        onExclamationIconClick={handleExclamationIconClick}
+        onMapIconClick={handleMapIconClick} 
+        onSettingsIconClick={handleSettingsIconClick} 
+      />
     </div>
   );
 }
