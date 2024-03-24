@@ -21,6 +21,7 @@ function ReportButton({ onClick }) {
 function SearchContainer({ onFavLocationsClick, searchQuery, setSearchQuery }) {
   const handleSearchInputChange = (event) => {
     setSearchQuery(event.target.value); // Update the search query state
+    console.log('SEARCH', event.target.value)
   };
   return (
     <div className='search-container'>
@@ -130,7 +131,6 @@ function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick, favLoc
                 </button>
               </li>
             ))}
-            
             {reports.map((report, index) => (
               <li key={report.case_}>
                 {favLocations.includes(report.block) ? (
@@ -160,7 +160,6 @@ function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick, favLoc
     </>
   );
 }
-
 function ReportDetailsPage({report}) {
   return (
     <>
@@ -196,6 +195,7 @@ function SendReportPage({ onClick }) {
     block: '',
     _location_description: ''
   });
+  const [address, setAddress] = useState({});
 
   function getCurrentTime() {
     const currentDate = new Date();
@@ -218,60 +218,96 @@ function SendReportPage({ onClick }) {
   
     return `${month}/${date}/${year}`;
   }
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
+  const handleInputChange = async (event) => {
+    const { name, value, id } = event.target;
+  
     if (name === 'locationType' && value === 'Current') {
       // If the user selects "Current", retrieve the current location
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (position) => {
+          async (position) => {
             const { latitude, longitude } = position.coords;
-            // Update the formData with the current latitude and longitude
-            setFormData({
-              ...formData,
-              [name]: value,
-              latitude: latitude.toString(),
-              longitude: longitude.toString()
-            });
+
+            // Fetch street address from latitude and longitude
+                  try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
+                    
+                    if (!response.ok) {
+                      throw new Error('Network response was not ok');
+                    }
+            
+                    const data = await response.json();
+                    setAddress(data);
+                    setFormData({
+                      ...formData,
+                      [name]: value,
+                      latitude: latitude.toString(),
+                      longitude: longitude.toString(),
+                      block: data.display_name
+                    });
+                  } catch (error) {
+                    console.error('Error fetching address:', error);
+                  }
           },
           (error) => {
             console.error('Error getting current location:', error);
           }
         );
-      } else {
+      } else{
         console.error('Geolocation is not supported by this browser.');
       }
-    } else {
-      // For other inputs, update the formData as usual
       setFormData({
         ...formData,
         [name]: value
       });
-    }
-  };
-  const [address, setAddress] = useState({});
-    useEffect(() => {
-      const fetchData = async () => {
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${formData.latitude}&lon=${formData.longitude}&zoom=18&addressdetails=1`);
+    } else if (name === 'locationType' && value === 'Other') {
+      setFormData({
+          ...formData,
+          [name]: value
+      });
+  } else if (name === 'details') {
+      setFormData({
+        ...formData,
+        [name]: value
+    });
+  } else {
+    let lat = '', long = '';
+    (async () => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${formData.block}&addressdetails=1`);
           
           if (!response.ok) {
-            throw new Error('Network response was not ok');
+              throw new Error('Network response was not ok');
           }
-  
-          const data = await response.json();
-          setAddress(data);
-        } catch (error) {
-          console.error('Error fetching address:', error);
-        }
-      };
-  
-      fetchData();
-    }, [formData.latitude, formData.longitude]);
 
-  console.log(address)
-  
+          const data = await response.json();
+          if (data && data.length > 0) {
+              lat = data[0].lat.toString();
+              long = data[0].lon.toString();
+          } else {
+              console.error('No coordinates found for the given address');
+          }
+          setFormData({
+            ...formData,
+            [name]: value,
+            latitude: lat,
+            longitude: long
+        });
+      } catch (error) {
+        console.error('Error fetching coordinates:', error);
+      }
+    })();
+  //   setFormData({
+  //     ...formData,
+  //     [name]: value,
+  //     latitude: lat,
+  //     longitude: long
+  // });
+  }
+};
+
   const handleSubmit = () => {
+
     const newEntry = {
       locationType: formData.locationType,
       Category: formData.Category,
@@ -282,15 +318,14 @@ function SendReportPage({ onClick }) {
       latitude: formData.latitude,
       longitude: formData.longitude,
       date: formData.date,
-      block: `${address.address.house_number} ${address.address.road}`,
+      block: formData.block,
       _location_description: `${address.type}`
     };
-  
     // Fetch existing data from local storage or initialize as an empty array
     const existingData = JSON.parse(sessionStorage.getItem('chicago_crime_data')) || [];
   
     // Add new entry to existing data
-    const newData = [...existingData, newEntry];
+    const newData = [newEntry, ...existingData];
   
     // Store updated data back to local storage
     sessionStorage.setItem('chicago_crime_data', JSON.stringify(newData));
@@ -323,7 +358,6 @@ function SendReportPage({ onClick }) {
   );
 }
 
-// Location section on SendReportPage
 function LocationSection({ formData, onInputChange }) {
   return (
     <Form.Group controlId="locationType">
@@ -355,28 +389,20 @@ function LocationSection({ formData, onInputChange }) {
           {formData.locationType === 'Other' && (
             <Form.Control
               className="form-check-custom other-input"
-              // style={{ display: formData.locationType === 'other' ? 'block' : 'none' }}
               style={{ visibility: formData.locationType === 'Other' ? 'visible' : 'hidden' }}
               type="text"
               placeholder="Enter location"
-              name="location"
-              value={formData.location}
+              name="block"
+              value={formData.block}
               onChange={onInputChange}
             />
           )}
         </div>
       </div>
-      {/* Uncomment the following code to display the coordinates so you know they're working */}
-      {/* {formData.latitude && formData.longitude && (
-        <div>
-          Latitude: {formData.latitude}, Longitude: {formData.longitude}
-        </div>
-      )} */}
     </Form.Group>
   );
 }
 
-// Report category section on SendReportPage
 function ReportCategorySection({ formData, onInputChange }) {
   return (
     <div className="report-category-container">
@@ -436,7 +462,6 @@ function ReportCategorySection({ formData, onInputChange }) {
   );
 }
 
-// Details section on SendReportPage
 function DetailsSection({ formData, onInputChange }) {
   return (
     <Form.Group controlId="details">
@@ -453,7 +478,6 @@ function DetailsSection({ formData, onInputChange }) {
   );
 }
 
-// Time section on SendReportPage
 function TimeSection({ formData, onInputChange }) {
   const hoursOptions = [];
   const minutesOptions = ["00", "30"];
@@ -498,9 +522,9 @@ function TimeSection({ formData, onInputChange }) {
     </Form.Group>
   );
 }
-
 function MapPage({ reports }) {
   const [currentLocation, setCurrentLocation] = useState([0, 0]);
+  const [userReports, setUserReports] = useState([]);
 
   // Create icons for currentLocation and reports
   const currLocIcon = new Icon({
@@ -529,6 +553,14 @@ function MapPage({ reports }) {
     }
   }, []);
 
+  useEffect(() => {
+    const userReportsData = JSON.parse(sessionStorage.getItem('chicago_crime_data')) || [];
+    // Sort the user reports from descending to ascending
+    const sortedReports = [...userReportsData].sort((a, b) => new Date(b.date) - new Date(a.date));
+    setUserReports(sortedReports);
+  }, []);
+
+
   return (
     <>
       <div className="map-legend">
@@ -555,6 +587,20 @@ function MapPage({ reports }) {
 
         {/* Markers for Reports */}
         {reports.map((report) => {
+          // Parse coordinates from string "(latitude, longitude)"
+          // const coordinates = report.location.replace(/[()]/g, '').split(',').map(coord => parseFloat(coord.trim()));
+          return (
+            <Marker key={report.case_} position={[report.latitude, report.longitude]} icon={reportIcon}>
+              <Popup>
+                <div>
+                  <h3>{report.details}</h3>
+                  <p>{report._location_description}</p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+        {userReports.map((report) => {
           // Parse coordinates from string "(latitude, longitude)"
           // const coordinates = report.location.replace(/[()]/g, '').split(',').map(coord => parseFloat(coord.trim()));
           return (
@@ -754,6 +800,7 @@ function App() {
   const filteredReports = reports.filter((report) =>
     report.block.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
 
   return ( /* Return based off scene selected */
     <div className='phone-screen'>
