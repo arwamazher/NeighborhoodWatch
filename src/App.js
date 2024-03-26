@@ -21,7 +21,6 @@ function ReportButton({ onClick }) {
 function SearchContainer({ onFavLocationsClick, searchQuery, setSearchQuery }) {
   const handleSearchInputChange = (event) => {
     setSearchQuery(event.target.value); // Update the search query state
-    console.log('SEARCH', event.target.value)
   };
   return (
     <div className='search-container'>
@@ -85,7 +84,6 @@ function NavItem({ icon, onClick }) {
 
 function RecentActivityPage({ reports, onSeeDetails, onReportButtonClick, favLocations }) {
   const [scene, setScene] = useState('recentActivity'); // Manage current scene
-  const [selectedReport, setSelectedReport] = useState(null); // Store the selected report
   const [thumbsUpFilled, setThumbsUpFilled] = useState({}); // Track filled status of thumbs-up buttons
   const [userReports, setUserReports] = useState([]);
 
@@ -219,7 +217,8 @@ function SendReportPage({ onClick }) {
     return `${month}/${date}/${year}`;
   }
   const handleInputChange = async (event) => {
-    const { name, value, id } = event.target;
+    const { name, value} = event.target;
+    console.log('TARGET', event.target)
   
     if (name === 'locationType' && value === 'Current') {
       // If the user selects "Current", retrieve the current location
@@ -260,54 +259,33 @@ function SendReportPage({ onClick }) {
         ...formData,
         [name]: value
       });
-    } else if (name === 'locationType' && value === 'Other') {
-      setFormData({
-          ...formData,
-          [name]: value
-      });
-  } else if (name === 'details') {
-      setFormData({
-        ...formData,
-        [name]: value
-    });
-  } else {
-    let lat = '', long = '';
-    (async () => {
-      try {
-        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${formData.block}&addressdetails=1`);
-          
-          if (!response.ok) {
-              throw new Error('Network response was not ok');
-          }
-
-          const data = await response.json();
-          if (data && data.length > 0) {
-              lat = data[0].lat.toString();
-              long = data[0].lon.toString();
-          } else {
-              console.error('No coordinates found for the given address');
-          }
-          setFormData({
-            ...formData,
-            [name]: value,
-            latitude: lat,
-            longitude: long
-        });
-      } catch (error) {
-        console.error('Error fetching coordinates:', error);
-      }
-    })();
-  //   setFormData({
-  //     ...formData,
-  //     [name]: value,
-  //     latitude: lat,
-  //     longitude: long
-  // });
+    } else {
+    setFormData({
+      ...formData,
+      [name]: value,
+  });
   }
 };
 
-  const handleSubmit = () => {
+const handleSubmit = async () => {
+  try {
+    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${formData.block}&addressdetails=1`);
+    
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
 
+    const data = await response.json();
+    let lat = '', long = '';
+    
+    if (data && data.length > 0) {
+      lat = data[0].lat.toString();
+      long = data[0].lon.toString();
+    } else {
+      console.error('No coordinates found for the given address');
+    }
+
+    // Create new entry after fetching lat and long
     const newEntry = {
       locationType: formData.locationType,
       Category: formData.Category,
@@ -315,24 +293,31 @@ function SendReportPage({ onClick }) {
       arrest: formData.arrest,
       time: formData.time + ' ' + formData.ampm,
       ampm: formData.ampm,
-      latitude: formData.latitude,
-      longitude: formData.longitude,
+      latitude: lat,
+      longitude: long,
       date: formData.date,
       block: formData.block,
       _location_description: `${address.type}`
     };
+
+    console.log('NEW ENTRY', newEntry);
+
     // Fetch existing data from local storage or initialize as an empty array
     const existingData = JSON.parse(sessionStorage.getItem('chicago_crime_data')) || [];
-  
+
     // Add new entry to existing data
     const newData = [newEntry, ...existingData];
-  
+
     // Store updated data back to local storage
     sessionStorage.setItem('chicago_crime_data', JSON.stringify(newData));
-  
+
     // Trigger the onClick function passed from the parent component
     onClick();
-  };
+
+  } catch (error) {
+    console.error('Error fetching coordinates:', error);
+  }
+};
 
   return (
     <>
@@ -682,7 +667,6 @@ function SettingsPage({ onFavLocationsClick} ) {
 }
 
 function FavLocationsPage({ favLocations, onAddLocation }) {
-  const [streetAddress, setStreetAddress] = useState('');
 
   const [newLocation, setNewLocation] = useState('');
 
